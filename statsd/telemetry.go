@@ -25,9 +25,11 @@ type telemetryClient struct {
 	c          *Client
 	tags       []string
 	tagsByType map[metricType][]string
-	sender     *sender
-	worker     *worker
 	devMode    bool
+
+	// dedicated sender/handler when using a custom addr
+	sender   *sender
+	mHandler *metricHandler
 }
 
 func newTelemetryClient(c *Client, transport string, devMode bool) *telemetryClient {
@@ -58,12 +60,12 @@ func newTelemetryClientWithCustomAddr(c *Client, transport string, devMode bool,
 
 	t := newTelemetryClient(c, transport, devMode)
 
-	// Creating a custom sender/worker with 1 worker in mutex mode for the
+	// Creating a custom sender/metricHandler with 1 handler in mutex mode for the
 	// telemetry that share the same bufferPool.
 	// FIXME due to performance pitfall, we're always using UDP defaults
 	// even for UDS.
 	t.sender = newSender(telemetryWriter, DefaultUDPBufferPoolSize, pool)
-	t.worker = newWorker(pool, t.sender)
+	t.mHandler = newMetricHandler(pool, t.sender)
 	return t, nil
 }
 
@@ -89,15 +91,15 @@ func (t *telemetryClient) run(wg *sync.WaitGroup, stop chan struct{}) {
 
 func (t *telemetryClient) sendTelemetry() {
 	for _, m := range t.flush() {
-		if t.worker != nil {
-			t.worker.processMetric(m)
+		if t.mHandler != nil {
+			t.mHandler.processMetric(m)
 		} else {
 			t.c.send(m)
 		}
 	}
 
-	if t.worker != nil {
-		t.worker.flush()
+	if t.mHandler != nil {
+		t.mHandler.flush()
 	}
 }
 

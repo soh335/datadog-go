@@ -16,10 +16,10 @@ func TestShouldSample(t *testing.T) {
 		t.Run(fmt.Sprintf("Rate %0.2f", rate), func(t *testing.T) {
 			t.Parallel()
 
-			worker := newWorker(newBufferPool(1, 1, 1), nil)
+			mh := newMetricHandler(newBufferPool(1, 1, 1), nil)
 			count := 0
 			for i := 0; i < iterations; i++ {
-				if shouldSample(rate, worker.random, &worker.randomLock) {
+				if shouldSample(rate, mh.random, &mh.randomLock) {
 					count++
 				}
 			}
@@ -30,14 +30,14 @@ func TestShouldSample(t *testing.T) {
 
 func BenchmarkShouldSample(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
-		worker := newWorker(newBufferPool(1, 1, 1), nil)
+		mh := newMetricHandler(newBufferPool(1, 1, 1), nil)
 		for pb.Next() {
-			shouldSample(0.1, worker.random, &worker.randomLock)
+			shouldSample(0.1, mh.random, &mh.randomLock)
 		}
 	})
 }
 
-func initWorker(bufferSize int) (*bufferPool, *sender, *worker) {
+func initMetricHandler(bufferSize int) (*bufferPool, *sender, *metricHandler) {
 	pool := newBufferPool(10, bufferSize, 5)
 	// manually create the sender so the sender loop is not started. All we
 	// need is the queue
@@ -46,12 +46,12 @@ func initWorker(bufferSize int) (*bufferPool, *sender, *worker) {
 		pool:  pool,
 	}
 
-	w := newWorker(pool, s)
+	w := newMetricHandler(pool, s)
 	return pool, s, w
 }
 
-func testWorker(t *testing.T, m metric, expectedBuffer string) {
-	_, s, w := initWorker(100)
+func testMetricHandler(t *testing.T, m metric, expectedBuffer string) {
+	_, s, w := initMetricHandler(100)
 
 	err := w.processMetric(m)
 	assert.Nil(t, err)
@@ -62,8 +62,8 @@ func testWorker(t *testing.T, m metric, expectedBuffer string) {
 
 }
 
-func TestWorkerGauge(t *testing.T) {
-	testWorker(
+func TestMetricHandlerGauge(t *testing.T) {
+	testMetricHandler(
 		t,
 		metric{
 			metricType: gauge,
@@ -78,8 +78,8 @@ func TestWorkerGauge(t *testing.T) {
 	)
 }
 
-func TestWorkerCount(t *testing.T) {
-	testWorker(
+func TestMetricHandlerCount(t *testing.T) {
+	testMetricHandler(
 		t,
 		metric{
 			metricType: count,
@@ -94,8 +94,8 @@ func TestWorkerCount(t *testing.T) {
 	)
 }
 
-func TestWorkerHistogram(t *testing.T) {
-	testWorker(
+func TestMetricHandlerHistogram(t *testing.T) {
+	testMetricHandler(
 		t,
 		metric{
 			metricType: histogram,
@@ -110,8 +110,8 @@ func TestWorkerHistogram(t *testing.T) {
 	)
 }
 
-func TestWorkerDistribution(t *testing.T) {
-	testWorker(
+func TestMetricHandlerDistribution(t *testing.T) {
+	testMetricHandler(
 		t,
 		metric{
 			metricType: distribution,
@@ -126,8 +126,8 @@ func TestWorkerDistribution(t *testing.T) {
 	)
 }
 
-func TestWorkerSet(t *testing.T) {
-	testWorker(
+func TestMetricHandlerSet(t *testing.T) {
+	testMetricHandler(
 		t,
 		metric{
 			metricType: set,
@@ -142,8 +142,8 @@ func TestWorkerSet(t *testing.T) {
 	)
 }
 
-func TestWorkerTiming(t *testing.T) {
-	testWorker(
+func TestMetricHandlerTiming(t *testing.T) {
+	testMetricHandler(
 		t,
 		metric{
 			metricType: timing,
@@ -158,8 +158,8 @@ func TestWorkerTiming(t *testing.T) {
 	)
 }
 
-func TestWorkerHistogramAggregated(t *testing.T) {
-	testWorker(
+func TestMetricHandlerHistogramAggregated(t *testing.T) {
+	testMetricHandler(
 		t,
 		metric{
 			metricType: histogramAggregated,
@@ -174,8 +174,8 @@ func TestWorkerHistogramAggregated(t *testing.T) {
 	)
 }
 
-func TestWorkerHistogramAggregatedMultiple(t *testing.T) {
-	_, s, w := initWorker(100)
+func TestMetricHandlerHistogramAggregatedMultiple(t *testing.T) {
+	_, s, w := initMetricHandler(100)
 
 	m := metric{
 		metricType: histogramAggregated,
@@ -194,7 +194,7 @@ func TestWorkerHistogramAggregatedMultiple(t *testing.T) {
 	assert.Equal(t, "namespace.test_histogram:1.1:2.2:3.3:4.4|h|#globalTags,globalTags2,tag1,tag2\n", string(data.buffer))
 
 	// reducing buffer size so not all values fit in one packet
-	_, s, w = initWorker(70)
+	_, s, w = initMetricHandler(70)
 
 	err = w.processMetric(m)
 	assert.Nil(t, err)
@@ -206,8 +206,8 @@ func TestWorkerHistogramAggregatedMultiple(t *testing.T) {
 	assert.Equal(t, "namespace.test_histogram:3.3:4.4|h|#globalTags,globalTags2,tag1,tag2\n", string(data.buffer))
 }
 
-func TestWorkerDistributionAggregated(t *testing.T) {
-	testWorker(
+func TestMetricHandlerDistributionAggregated(t *testing.T) {
+	testMetricHandler(
 		t,
 		metric{
 			metricType: distributionAggregated,
@@ -222,8 +222,8 @@ func TestWorkerDistributionAggregated(t *testing.T) {
 	)
 }
 
-func TestWorkerDistributionAggregatedMultiple(t *testing.T) {
-	_, s, w := initWorker(100)
+func TestMetricHandlerDistributionAggregatedMultiple(t *testing.T) {
+	_, s, w := initMetricHandler(100)
 
 	m := metric{
 		metricType: distributionAggregated,
@@ -242,7 +242,7 @@ func TestWorkerDistributionAggregatedMultiple(t *testing.T) {
 	assert.Equal(t, "namespace.test_distribution:1.1:2.2:3.3:4.4|d|#globalTags,globalTags2,tag1,tag2\n", string(data.buffer))
 
 	// reducing buffer size so not all values fit in one packet
-	_, s, w = initWorker(72)
+	_, s, w = initMetricHandler(72)
 
 	err = w.processMetric(m)
 	assert.Nil(t, err)
@@ -254,9 +254,9 @@ func TestWorkerDistributionAggregatedMultiple(t *testing.T) {
 	assert.Equal(t, "namespace.test_distribution:3.3:4.4|d|#globalTags,globalTags2,tag1,tag2\n", string(data.buffer))
 }
 
-func TestWorkerMultipleDifferentDistributionAggregated(t *testing.T) {
+func TestMetricHandlerMultipleDifferentDistributionAggregated(t *testing.T) {
 	// first metric will fit but not the second one
-	_, s, w := initWorker(160)
+	_, s, w := initMetricHandler(160)
 
 	m := metric{
 		metricType: distributionAggregated,

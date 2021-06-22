@@ -10,7 +10,7 @@ import (
 )
 
 func TestAggregatorSample(t *testing.T) {
-	a := newAggregator(nil)
+	a := newAggregator(nil, false, 0, 0)
 
 	tags := []string{"tag1", "tag2"}
 
@@ -46,7 +46,7 @@ func TestAggregatorSample(t *testing.T) {
 }
 
 func TestAggregatorFlush(t *testing.T) {
-	a := newAggregator(nil)
+	a := newAggregator(nil, false, 0, 0)
 
 	tags := []string{"tag1", "tag2"}
 
@@ -196,7 +196,7 @@ func TestAggregatorFlush(t *testing.T) {
 }
 
 func TestAggregatorFlushConcurrency(t *testing.T) {
-	a := newAggregator(nil)
+	a := newAggregator(nil, false, 0, 0)
 
 	var wg sync.WaitGroup
 	wg.Add(10)

@@ -38,9 +38,8 @@ type aggregator struct {
 	// distributions and timings. Since they need sampling they need to
 	// lock for random. When using both ChannelMode and ExtendedAggregation
 	// we don't want goroutine to fight over the lock.
-	inputMetrics    chan metric
-	stopChannelMode chan struct{}
-	wg              sync.WaitGroup
+	channelMode bool
+	workers     *workerPool
 }
 
 type aggregatorMetrics struct {
@@ -53,18 +52,26 @@ type aggregatorMetrics struct {
 	nbContextTiming       int32
 }
 
-func newAggregator(c *Client) *aggregator {
-	return &aggregator{
-		client:          c,
-		counts:          countsMap{},
-		gauges:          gaugesMap{},
-		sets:            setsMap{},
-		histograms:      newBufferedContexts(newHistogramMetric),
-		distributions:   newBufferedContexts(newDistributionMetric),
-		timings:         newBufferedContexts(newTimingMetric),
-		closed:          make(chan struct{}),
-		stopChannelMode: make(chan struct{}),
+func newAggregator(c *Client, channelMode bool, nbWorkers int, channelModeBufferSize int) *aggregator {
+	agg := &aggregator{
+		client:        c,
+		counts:        countsMap{},
+		gauges:        gaugesMap{},
+		sets:          setsMap{},
+		histograms:    newBufferedContexts(newHistogramMetric),
+		distributions: newBufferedContexts(newDistributionMetric),
+		timings:       newBufferedContexts(newTimingMetric),
+		closed:        make(chan struct{}),
+		channelMode:   channelMode,
 	}
+
+	if agg.channelMode {
+		agg.workers = newWorkerPool(channelModeBufferSize, true)
+		for i := 0; i < nbWorkers; i++ {
+			agg.workers.addWorker(agg.processMetric)
+		}
+	}
+	return agg
 }
 
 func (a *aggregator) start(flushInterval time.Duration) {
@@ -82,40 +89,11 @@ func (a *aggregator) start(flushInterval time.Duration) {
 	}()
 }
 
-func (a *aggregator) startReceivingMetric(bufferSize int, nbWorkers int) {
-	a.inputMetrics = make(chan metric, bufferSize)
-	for i := 0; i < nbWorkers; i++ {
-		a.wg.Add(1)
-		go a.pullMetric()
-	}
-}
-
-func (a *aggregator) stopReceivingMetric() {
-	close(a.stopChannelMode)
-	a.wg.Wait()
-}
-
 func (a *aggregator) stop() {
-	a.closed <- struct{}{}
-}
-
-func (a *aggregator) pullMetric() {
-	for {
-		select {
-		case m := <-a.inputMetrics:
-			switch m.metricType {
-			case histogram:
-				a.histogram(m.name, m.fvalue, m.tags, m.rate)
-			case distribution:
-				a.distribution(m.name, m.fvalue, m.tags, m.rate)
-			case timing:
-				a.timing(m.name, m.fvalue, m.tags, m.rate)
-			}
-		case <-a.stopChannelMode:
-			a.wg.Done()
-			return
-		}
+	if a.channelMode {
+		a.workers.stop()
 	}
+	a.closed <- struct{}{}
 }
 
 func (a *aggregator) flush() {
@@ -252,13 +230,34 @@ func (a *aggregator) set(name string, value string, tags []string) error {
 type bufferedMetricSampleFunc func(name string, value float64, tags []string, rate float64) error
 
 func (a *aggregator) histogram(name string, value float64, tags []string, rate float64) error {
+	if a.channelMode {
+		return a.workers.process(metric{metricType: histogram, name: name, fvalue: value, tags: tags, rate: rate})
+	}
 	return a.histograms.sample(name, value, tags, rate)
 }
 
 func (a *aggregator) distribution(name string, value float64, tags []string, rate float64) error {
+	if a.channelMode {
+		return a.workers.process(metric{metricType: distribution, name: name, fvalue: value, tags: tags, rate: rate})
+	}
 	return a.distributions.sample(name, value, tags, rate)
 }
 
 func (a *aggregator) timing(name string, value float64, tags []string, rate float64) error {
+	if a.channelMode {
+		return a.workers.process(metric{metricType: timing, name: name, fvalue: value, tags: tags, rate: rate})
+	}
 	return a.timings.sample(name, value, tags, rate)
+}
+
+func (a *aggregator) processMetric(m metric) error {
+	switch m.metricType {
+	case histogram:
+		return a.histograms.sample(m.name, m.fvalue, m.tags, m.rate)
+	case distribution:
+		return a.distributions.sample(m.name, m.fvalue, m.tags, m.rate)
+	case timing:
+		return a.timings.sample(m.name, m.fvalue, m.tags, m.rate)
+	}
+	return nil
 }

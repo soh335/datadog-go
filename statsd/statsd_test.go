@@ -112,7 +112,7 @@ func TestCloneWithExtraOptions(t *testing.T) {
 
 	assert.Equal(t, client.Tags, []string{"tag1", "tag2"})
 	assert.Equal(t, client.Namespace, "")
-	assert.Equal(t, client.workersMode, MutexMode)
+	assert.Equal(t, client.handlersChannelMode, false)
 	assert.Equal(t, client.addrOption, defaultAddr)
 	assert.Len(t, client.options, 1)
 
@@ -121,7 +121,7 @@ func TestCloneWithExtraOptions(t *testing.T) {
 
 	assert.Equal(t, cloneClient.Tags, []string{"tag1", "tag2"})
 	assert.Equal(t, cloneClient.Namespace, "test.")
-	assert.Equal(t, cloneClient.workersMode, ChannelMode)
+	assert.Equal(t, cloneClient.handlersChannelMode, true)
 	assert.Equal(t, cloneClient.addrOption, defaultAddr)
 	assert.Len(t, cloneClient.options, 3)
 }
@@ -269,9 +269,8 @@ func TestGroupClient(t *testing.T) {
 			[]Option{WithExtendedClientSideAggregation(), WithBufferShardCount(1), WithChannelMode()},
 			sendExtendedMetricsWithExtentedAggregation,
 			func(c *Client) {
-				// since we're using ChannelMode we give a second to the worker to
-				// empty the channel. A second should be more than enough to pull 6
-				// items from a channel.
+				// since we're using ChannelMode we give a second to the workers to empty the
+				// channel. A second should be more than enough to pull 6 items from a channel.
 				time.Sleep(1 * time.Second)
 				c.Close()
 			},

@@ -123,7 +123,7 @@ func TestNewTelemetry(t *testing.T) {
 	assert.Equal(t, telemetry.c, client)
 	assert.Equal(t, telemetry.tags, basicExpectedTags)
 	assert.Nil(t, telemetry.sender)
-	assert.Nil(t, telemetry.worker)
+	assert.Nil(t, telemetry.mHandler)
 }
 
 func submitTestMetrics(c *Client) {
