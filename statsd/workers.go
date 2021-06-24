@@ -35,6 +35,7 @@ type workerPool struct {
 	bufferSize   int
 	workers      []*worker
 	ChannelMode  bool
+	workerID     uint32
 }
 
 func newWorkerPool(bufferSize int, ChannelMode bool) *workerPool {
@@ -66,9 +67,17 @@ func (p *workerPool) stop() {
 	p.workers = p.workers[:0]
 }
 
-func (p *workerPool) process(m metric) error {
+func (p *workerPool) nameSharding(m metric) uint32 {
 	h := hashString32(m.name)
-	workerID := h % uint32(len(p.workers))
+	return h % uint32(len(p.workers))
+}
+
+func (p *workerPool) roundRobinSharding(m metric) uint32 {
+	return atomic.AddUint32(&p.workerID, 1) % uint32(len(p.workers))
+}
+
+func (p *workerPool) process(m metric) error {
+	workerID := p.roundRobinSharding(m)
 
 	if p.ChannelMode {
 		select {

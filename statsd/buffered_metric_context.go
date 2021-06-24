@@ -2,6 +2,7 @@ package statsd
 
 import (
 	"math/rand"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -48,6 +49,11 @@ func (bc *bufferedMetricContexts) flush(metrics []metric) []metric {
 	}
 	atomic.AddInt32(&bc.nbContext, int32(len(values)))
 	return metrics
+}
+
+func getContextAndTags(name string, tags []string) (string, string) {
+	stringTags := strings.Join(tags, tagSeparatorSymbol)
+	return name + ":" + stringTags, stringTags
 }
 
 func (bc *bufferedMetricContexts) sample(name string, value float64, tags []string, rate float64) error {

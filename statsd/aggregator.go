@@ -167,11 +167,6 @@ func getContext(name string, tags []string) string {
 	return name + ":" + strings.Join(tags, tagSeparatorSymbol)
 }
 
-func getContextAndTags(name string, tags []string) (string, string) {
-	stringTags := strings.Join(tags, tagSeparatorSymbol)
-	return name + ":" + stringTags, stringTags
-}
-
 func (a *aggregator) count(name string, value int64, tags []string) error {
 	context := getContext(name, tags)
 	a.countsM.RLock()
