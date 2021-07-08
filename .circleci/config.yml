@@ -59,14 +59,21 @@ commands:
       - checkout
       # TODO: remove this once we have go.mod
       - run: go get github.com/stretchr/testify
-      - run: go vet ./statsd/...
+      - run: go vet -atomic ./statsd/...
       - run: go fmt ./statsd/...
       - run:
           name: Run tests
           command: |
+
             # race detector is only available on amd64
-            echo "running with race detector"
-            go test -race -v ./statsd/...
+            if [[ "<< parameters.arch >>" == "i386" ]]
+            then
+              echo "running without race detector"
+              GOARCH=386 go test -v ./statsd/...
+            else
+              echo "running with race detector"
+              go test -race -v ./statsd/...
+            fi
 
 jobs:
   # Those allow us to have the os name in the job name. 'matrix' don't add static parameters to the name in the circleci
