@@ -31,7 +31,7 @@ type sender struct {
 	transport   statsdWriter
 	pool        *bufferPool
 	queue       chan *statsdBuffer
-	metrics     *SenderMetrics
+	metrics     SenderMetrics
 	stop        chan struct{}
 	flushSignal chan struct{}
 }
@@ -41,7 +41,7 @@ func newSender(transport statsdWriter, queueSize int, pool *bufferPool) *sender 
 		transport:   transport,
 		pool:        pool,
 		queue:       make(chan *statsdBuffer, queueSize),
-		metrics:     &SenderMetrics{},
+		metrics:     SenderMetrics{},
 		stop:        make(chan struct{}),
 		flushSignal: make(chan struct{}),
 	}
