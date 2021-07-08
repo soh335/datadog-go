@@ -94,6 +94,22 @@ jobs:
           go-version: << parameters.go-version >>
           arch: "amd64"
 
+  tests_i386:
+    working_directory: /home/circleci/.go_workspace/src/github.com/DataDog/datadog-go
+    environment:
+      GO111MODULE: auto
+    executor: linux_amd64
+    parameters:
+      go-version:
+        type: string
+    steps:
+      - install_go_linux:
+          arch: "386"
+          version: << parameters.go-version >>
+      - run_tests:
+          go-version: << parameters.go-version >>
+          arch: "i386"
+
   tests_arm64:
     working_directory: /home/circleci/.go_workspace/src/github.com/DataDog/datadog-go
     environment:
