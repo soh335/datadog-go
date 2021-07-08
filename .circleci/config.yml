@@ -65,14 +65,8 @@ commands:
           name: Run tests
           command: |
             # race detector is only available on amd64
-            if [[ "<< parameters.arch >>" == "amd64" ]]
-            then
-              echo "running with race detector"
-              go test -race -v ./statsd/...
-            else
-              echo "running without race detector"
-              go test -v ./statsd/...
-            fi
+            echo "running with race detector"
+            go test -race -v ./statsd/...
 
 jobs:
   # Those allow us to have the os name in the job name. 'matrix' don't add static parameters to the name in the circleci
