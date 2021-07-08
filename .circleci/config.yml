@@ -44,9 +44,16 @@ commands:
             curl --fail --location -sS "https://dl.google.com/go/go<<parameters.version >>.linux-<< parameters.arch >>.tar.gz" \
             | sudo tar --no-same-owner --strip-components=1 --gunzip -x -C /usr/local/go/
 
-            echo "export PATH=$PATH:/usr/local/go/bin" >> $BASH_ENV
+            echo "Install done"
+
             $SUDO chown -R "$(whoami):" /usr/local/go
 
+            echo "chmod done"
+
+            echo "export PATH=$PATH:/usr/local/go/bin" >> $BASH_ENV
+            echo "export done"
+
+            which go
             go version
 
   run_tests:
