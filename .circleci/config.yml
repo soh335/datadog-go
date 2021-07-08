@@ -133,6 +133,10 @@ workflows:
           matrix:
             parameters:
               go-version: ["1.13", "1.14", "1.15", "1.16"]
+      - tests_i386:
+          matrix:
+            parameters:
+              go-version: ["1.13", "1.14", "1.15", "1.16"]
       - tests_arm64:
           matrix:
             parameters:
