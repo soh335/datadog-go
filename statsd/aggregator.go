@@ -15,14 +15,6 @@ type (
 )
 
 type aggregator struct {
-	nbContextGauge int32
-	nbContextCount int32
-	nbContextSet   int32
-
-	countsM sync.RWMutex
-	gaugesM sync.RWMutex
-	setsM   sync.RWMutex
-
 	gauges        gaugesMap
 	counts        countsMap
 	sets          setsMap
@@ -41,6 +33,14 @@ type aggregator struct {
 	inputMetrics    chan metric
 	stopChannelMode chan struct{}
 	wg              sync.WaitGroup
+
+	nbContextGauge int32
+	nbContextCount int32
+	nbContextSet   int32
+
+	countsM sync.RWMutex
+	gaugesM sync.RWMutex
+	setsM   sync.RWMutex
 }
 
 type aggregatorMetrics struct {
