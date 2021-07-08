@@ -105,13 +105,14 @@ jobs:
     working_directory: /home/circleci/.go_workspace/src/github.com/DataDog/datadog-go
     environment:
       GO111MODULE: auto
+      GOARCH: 386
     executor: linux_amd64
     parameters:
       go-version:
         type: string
     steps:
       - install_go_linux:
-          arch: "386"
+          arch: "amd64"
           version: << parameters.go-version >>
       - run_tests:
           go-version: << parameters.go-version >>
