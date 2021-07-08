@@ -111,7 +111,7 @@ jobs:
         type: string
     steps:
       - install_go_linux:
-          arch: "amd64"
+          arch: "386"
           version: << parameters.go-version >>
       - run_tests:
           go-version: << parameters.go-version >>
